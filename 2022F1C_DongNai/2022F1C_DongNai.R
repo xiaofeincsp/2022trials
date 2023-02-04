@@ -11,20 +11,21 @@ library(stringr)
 #library(openxlsx)
 
 
-folder = "D:\\OneDrive - CGIAR\\01_2023_2023\\trial_trial\\Vietnam_2022-2023\\2022F1C_Tay Ninh\\"
-file = "2022DMF1C1_CIAT_tani_Fieldbook_table_raw.xlsx"
+folder = "D:\\OneDrive - CGIAR\\01_2023_2023\\trial_trial\\Vietnam_2022-2023\\2022F1C_Dong Nai\\"
+file = "01_F1C1 dona data_2022Feb02.xlsx"
 
 data = read_excel(paste(folder, file, sep=""),
-                  sheet = "pre-harvest_modi",
+                  sheet = "dona",
                   skip=0)
 data = as.data.frame(data)
+str(data)
 
-chg_col = names(data[, str_detect(as.character(data[1,]), "\\.")])
+chg_col = c("CWBD_M9", "CBB_M9", 	"Shooting", "No_Main_Stem",
+          "Plant_Type"  )
 
 for(i in 1:length(chg_col)){
   for(j in 1:nrow(data)){
     
-    # missing = 4- 4*as.numeric(data[j, "Germination"] )
     missing = 4- 4*data[j, ]$Germination 
     if (missing <4){ 
       data[j, chg_col[i] ] = 
@@ -40,36 +41,11 @@ for(i in 1:length(chg_col)){
   
 }
 
+dongNai = data
+View(dongNai)
 
-
-# root data during harvesting
-root_data = read_excel(paste(folder, "Copy of Tayninh_Harvest_root data.xlsx", sep=""),
-                       sheet = "Sheet1",
-                       skip=0)
-root_data=as.data.frame(root_data)
-tayNinh = data %>%
-  left_join(root_data, by="plot_name" )
-
-
-
-# CMD data of 6Mon after Planting
-CMD6 = read_excel(paste(folder, "202285DMF1C_tani_CMD6MAP.xlsx", sep=""),
-                  sheet = "Sheet1",
-                  skip=0) 
-# names(CMD6)
-
-CMD6sel = as.data.frame(CMD6[, c("plot_name", "CMD M6")]  )
-tayNinh = tayNinh %>%
-  left_join(CMD6sel, by = "plot_name")
-
-# View(tayNinh)
-
-names(tayNinh) = gsub(" ", "_", names(tayNinh) )
-names(tayNinh) = gsub("\\.", "_", names(tayNinh) )
-
-write.csv(tayNinh, paste(folder,"2022DMF1C_TayNinh_mean_", Sys.Date(), ".csv", sep=""),
+ write.csv(dongNai, paste(folder,"2022DMF1C_DongNai_mean_", Sys.Date(), ".csv", sep=""),
           row.names=FALSE)
-
 
 
 
@@ -82,31 +58,43 @@ traitlist = c( "plot_name",  "accession_name" ,
                "Germination"  ,  "Vigor" ,                   
                "CMD_M1", "CMD_M3" , "CMD_M6",               
                "CMD_M9",  "CWBD_M9", "CBB_M9" ,
-               "Red_Spider_Mites" , "No_Main_Stem"  ,           
+               "Red_Spider_Mites" ,
+               "No_Main_Stem"  ,           
                "Shooting" ,  "Branching_Levels",          
                "Height_Of_Main_Stem" ,   "Height_To_1st_Branch",
                "Plant Type" , "Root Type" ,               
                "Peduncle" , "External Color" ,
                "Root Shape" , "Number Of Harvested Plant",
                "Number Of Roots" , "Root Weight" ,
-               "Root Constriction" , "Starch Content" ,
+               "Root Constriction" , "Starch Content"  ,
                "Number_Of_Stems_Collected")
 traitlist = gsub(" ", "_", traitlist )
 traitlist = gsub("\\.", "_", traitlist )
 
+
 pheno_trait = traitlist[9:length(traitlist)]
+
 # convert into numeric
-tayninhSel = tayNinh[, traitlist] %>%
+dongNai$Red_Spider_Mites = NA
+dongnaiSel = dongNai[, traitlist] %>%
   mutate(across(all_of(pheno_trait), as.numeric) )
 
 
+
+locs2 = rbind(tayNinh[, traitlist], dongNai[, traitlist])
+names(locs2)
+write.csv(locs2, paste(folder,"2022DMF1C__mean_2locs_", Sys.Date(), ".csv", sep=""),
+          row.names=FALSE)
+
+
+
 # not selected traits
-setdiff(names(tayNinh), names(tayninhSel))
+setdiff(names(dongNai), names(dongnaiSel))
 
 # View(tayninhSel)
-str(tayninhSel)
+str(dongnaiSel)
 
-trial_data = tayninhSel
+trial_data = dongnaiSel
 #### function visualize the layout -
 
 myplot <- ggplot(trial_data, aes(x=col_number, y= row_number, fill=rep_number)) +
@@ -180,7 +168,7 @@ COR_PLOT = function(plot_data = plot_data,
 
 
 
-plot_data = tayninhSel [, c("CMD_M1", "CMD_M6")]
+plot_data = trial_data [, c("CMD_M1", "CMD_M6")]
 names(plot_data) = c("Xvalue", "Yvalue")
 plot_title = "Cor of CMD between time"
 ylabel = "CMD severity of 6MAP"
@@ -192,7 +180,7 @@ COR_PLOT (plot_data = plot_data,
           xlabel = xlabel)
 
 
-plot_data = tayninhSel [, c("CMD_M3", "CMD_M6")]
+plot_data = trial_data [, c("CMD_M3", "CMD_M6")]
 names(plot_data) = c("Xvalue", "Yvalue")
 plot_title = "Cor of CMD between time"
 ylabel = "CMD severity of 6MAP"
@@ -203,8 +191,8 @@ COR_PLOT (plot_data = plot_data,
           ylabel = ylabel,
           xlabel = xlabel)
 
-names(tayninhSel)
-plot_data = tayninhSel [, c("CMD_M9", "CMD_M6")]
+names(trial_data)
+plot_data = trial_data [, c("CMD_M9", "CMD_M6")]
 names(plot_data) = c("Xvalue", "Yvalue")
 plot_title = "Cor of CMD between time"
 ylabel = "CMD severity of 6MAP"
@@ -216,8 +204,8 @@ COR_PLOT (plot_data = plot_data,
           xlabel = xlabel)
 
 
-names(tayninhSel)
-plot_data = tayninhSel [, c("Root_Type", "Root_Weight")]
+names(trial_data)
+plot_data = trial_data [, c("Root_Type", "Root_Weight")]
 names(plot_data) = c("Xvalue", "Yvalue")
 plot_title = "Root yield and type"
 ylabel = "Root weight per plot (kg)"
@@ -232,8 +220,9 @@ COR_PLOT (plot_data = plot_data,
 
 library(Hmisc)
 library(corrplot)
-pheno_only = tayninhSel [, pheno_trait]
-View(pheno_only)
+pheno_trait = pheno_trait [!pheno_trait =="Red_Spider_Mites"]
+pheno_only = dongnaiSel [, pheno_trait]
+#View(pheno_only)
 
 
 
@@ -245,7 +234,7 @@ testRes <- cor.mtest(as.matrix(pheno_only), conf.level = 0.95)
 
 # Save the file -----------------------------------------------------------
 
-pdf(paste(folder, "01_2022DMF1C_tayninh_trait_cor_",
+pdf(paste(folder, "01_2022DMF1C_dongnai_trait_cor_",
           Sys.Date(),".pdf", sep=""), width = 18, height = 18)
 
 corrplot(M,
@@ -265,6 +254,7 @@ corrplot(M,
 text(p1$x, p1$y, pos = 3, round(p1$corr, 2), col = "black", cex = 1)
 
 dev.off()
+
 
 
 
